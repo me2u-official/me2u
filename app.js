@@ -20,7 +20,11 @@ const CHUNK_SIZE    = 64 * 1024;   // 64 KB per WebRTC chunk
 const CONNECT_TIMEOUT_MS = 60_000; // 60s timeout for waiting
 const MAX_FILE_SIZE_BYTES = 0;     // 0 = no limit (P2P, unlimited)
 const PEERJS_CONFIG = {
-  debug: 0,          // 0 = silent in production
+  host: '0.peerjs.com',
+  port: 443,
+  secure: true,
+  pingInterval: 5000,
+  debug: 1,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -91,8 +95,8 @@ function hideStatus(id) {
    ──────────────────────────────────────────────────────────── */
 
 function generateSecureId() {
-  // Prepend 'p' to ensure it always starts with a letter (PeerJS requirement)
-  return 'p' + crypto.randomUUID().replace(/-/g, '');
+  // Return a 12-character lowercase alphanumeric string starting with 'p'
+  return 'p' + Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 7);
 }
 
 /** Extract peer ID from a full share URL or raw code */
