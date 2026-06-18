@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="me2u — Send files to anyone, anywhere in the world. Instant P2P transfers directly in your browser. No signup, no limits, fully encrypted.">
+  <meta name="theme-color" content="#07080f">
+  <!-- Security: Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' https://unpkg.com https://api.qrserver.com;
+             script-src 'self' 'unsafe-inline' https://unpkg.com;
+             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+             font-src https://fonts.gstatic.com;
+             connect-src 'self' https://0.peerjs.com wss://0.peerjs.com;
+             img-src 'self' data: https://api.qrserver.com;">
+  <title>me2u — Send Files to Anyone, Instantly</title>
+  <link rel="stylesheet" href="styles.css?v=2">
+  <!-- PeerJS for WebRTC -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
+  <script src="app.js?v=2" defer></script>
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <canvas id="particles" aria-hidden="true"></canvas>
+
+  <div class="wrapper">
+    <!-- Header -->
+    <header class="header">
+      <a href="index.html" class="logo" aria-label="me2u home">
+        <div class="logo-icon" aria-hidden="true">📡</div>
+        <span class="logo-text">me2u</span>
+      </a>
+      <span class="header-badge">E2E Encrypted · P2P</span>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-tag" aria-label="Live status">Powered by WebRTC</div>
+      <h1 id="hero-title">
+        Send files<br>
+        <span class="grad-text">from me, to you.</span>
+      </h1>
+      <p class="hero-sub">
+        Zero sign-up. Zero storage. Direct browser-to-browser transfers,
+        encrypted end-to-end. Works anywhere in the world.
+      </p>
+
+      <!-- Mode Toggle -->
+      <div class="mode-toggle" role="tablist" aria-label="Transfer mode">
+        <button class="mode-btn active" id="sendTabBtn" role="tab"
+          aria-selected="true" aria-controls="sendPanel">
+          📤 Send
+        </button>
+        <button class="mode-btn" id="receiveTabBtn" role="tab"
+          aria-selected="false" aria-controls="receivePanel">
+          📥 Receive
+        </button>
+      </div>
+    </section>
+
+    <!-- Layout Wrapper with Ad Sidebars -->
+    <div class="layout-wrapper">
+      
+      <!-- Left Sidebar Ad -->
+      <aside class="ad-sidebar">
+        <div class="ad-placeholder vertical">
+          <span>Advertisement</span>
+          <p>Skyscraper<br>(160x600)</p>
+          <!-- TODO: Insert Left AdSense code here -->
+        </div>
+      </aside>
+
+    <!-- Main Card -->
+    <main class="main-content">
+
+      <!-- ── SEND PANEL ─────────────────────────────────── -->
+      <div id="sendPanel" role="tabpanel" aria-labelledby="sendTabBtn">
+        <div class="card" id="sendCard">
+
+          <!-- Security Badges -->
+          <div class="security-badges" aria-label="Security features">
+            <span class="badge"><span class="badge-dot" style="background:#6c63ff;box-shadow:0 0 6px #6c63ff"></span>WebRTC Encrypted</span>
+            <span class="badge"><span class="badge-dot" style="background:#00ff9d;box-shadow:0 0 6px #00ff9d"></span>No Server Storage</span>
+            <span class="badge"><span class="badge-dot" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff"></span>Any File Size</span>
+          </div>
+
+          <!-- Drop Zone -->
+          <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+            aria-label="Drop zone: click or drag a file to send">
+            <div class="drop-zone-icon" aria-hidden="true">📁</div>
+            <p class="drop-zone-title">Drop your file here</p>
+            <p class="drop-zone-sub">or click to browse · any size, any type</p>
+            <button class="btn btn-primary" id="browseBtn" type="button">
+              <span>Choose File</span> <span aria-hidden="true">→</span>
+            </button>
+            <input type="file" id="fileInput" aria-hidden="true">
+          </div>
+
+          <!-- File Preview -->
+          <div class="file-preview" id="filePreview" aria-live="polite">
+            <div class="file-type-icon" id="fileTypeIcon" aria-hidden="true">📄</div>
+            <div class="file-info">
+              <div class="file-name" id="fileName">—</div>
+              <div class="file-meta" id="fileMeta">—</div>
+            </div>
+            <button class="file-remove" id="fileRemove" type="button"
+              aria-label="Remove selected file">✕</button>
+          </div>
+
+          <!-- Status Message -->
+          <div class="status-msg" id="sendStatus" role="status" aria-live="polite"></div>
+
+          <!-- Card Actions -->
+          <div class="card-actions" id="sendActions">
+            <button class="btn btn-primary" id="startSendBtn" type="button" disabled>
+              <span>🚀</span> <span>Generate Link</span>
+            </button>
+            <button class="btn btn-ghost" id="cancelSendBtn" type="button"
+              style="display:none" aria-label="Cancel transfer">Cancel</button>
+          </div>
+
+          <!-- Waiting for receiver -->
+          <div class="waiting-indicator hidden" id="waitingIndicator">
+            <div class="waiting-ring" aria-hidden="true"></div>
+            <p>Waiting for receiver to connect…</p>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:6px;">Share the link below with your recipient</p>
+          </div>
+
+          <!-- Share Section -->
+          <div class="share-section" id="shareSection" aria-label="Share link">
+            <p class="share-label">📎 Share this link</p>
+            <div class="share-link-box">
+              <input class="share-link-input" id="shareLinkInput" type="text"
+                readonly aria-label="Share link" placeholder="Generating…">
+              <button class="copy-btn" id="copyBtn" type="button" aria-label="Copy link">
+                <span id="copyIcon">📋</span>
+                <span id="copyText">Copy</span>
+              </button>
+            </div>
+            <!-- QR Code -->
+            <div class="qr-section" aria-label="QR code for mobile sharing">
+              <div class="qr-code" id="qrCode" aria-label="QR code"></div>
+              <div class="qr-info">
+                <h4>Scan to receive on mobile 📱</h4>
+                <p>Point any camera app at this code. No app download needed.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Section -->
+          <div class="progress-section" id="sendProgressSection">
+            <div class="progress-header">
+              <div class="progress-status">
+                <div class="progress-status-dot" id="sendStatusDot" aria-hidden="true"></div>
+                <span id="sendProgressLabel">Transferring…</span>
+              </div>
+              <span class="progress-speed" id="sendSpeed" aria-live="polite"></span>
+            </div>
+            <div class="progress-track" role="progressbar"
+              aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+              id="sendProgressTrack">
+              <div class="progress-fill" id="sendProgressFill"></div>
+            </div>
+            <div class="progress-stats">
+              <span id="sendProgressBytes">0 B / 0 B</span>
+              <span id="sendProgressPct">0%</span>
+            </div>
+          </div>
+
+          <!-- Success Animation -->
+          <div class="success-animation" id="sendSuccess">
+            <div class="success-icon" aria-hidden="true">✅</div>
+            <h3>File sent!</h3>
+            <p>The receiver has downloaded the file successfully.</p>
+            <button class="btn btn-primary" id="sendAgainBtn" type="button">
+              Send Another File
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" aria-label="Transfer statistics">
+          <div class="stat-item">
+            <div class="stat-value" id="statTransfers">0</div>
+            <div class="stat-label">Transfers</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statDataSent">0 B</div>
+            <div class="stat-label">Data Sent</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statPeers">0</div>
+            <div class="stat-label">Connected Peers</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RECEIVE PANEL ───────────────────────────────── -->
+      <div id="receivePanel" role="tabpanel" aria-labelledby="receiveTabBtn" class="hidden">
+        <div class="card">
+
+          <div class="code-input-wrap">
+            <h3>Enter the share code</h3>
+            <p>Paste the code or full link you received from the sender.</p>
+            <input class="code-input" id="codeInput" type="text"
+              inputmode="text" autocomplete="off" spellcheck="false"
+              maxlength="80"
+              placeholder="Paste code or link…"
+              aria-label="Share code or link">
+            <button class="btn btn-primary" id="connectBtn" type="button">
+              <span>📥</span> <span>Connect & Receive</span>
+            </button>
+          </div>
+
+          <!-- Status Message -->
+          <div class="status-msg" id="receiveStatus" role="status" aria-live="polite"></div>
+
+          <!-- File Preview (incoming) -->
+          <div class="file-preview" id="incomingFilePreview" aria-live="polite">
+            <div class="file-type-icon" id="incomingFileTypeIcon" aria-hidden="true">📄</div>
+            <div class="file-info">
+              <div class="file-name" id="incomingFileName">—</div>
+              <div class="file-meta" id="incomingFileMeta">—</div>
+            </div>
+            <button class="btn btn-primary" id="acceptDownloadBtn" type="button" style="margin-left: auto;">
+              Accept
+            </button>
+          </div>
+
+          <!-- Progress Section -->
+          <div class="progress-section" id="receiveProgressSection">
+            <div class="progress-header">
+              <div class="progress-status">
+                <div class="progress-status-dot" id="receiveStatusDot" aria-hidden="true"></div>
+                <span id="receiveProgressLabel">Receiving…</span>
+              </div>
+              <span class="progress-speed" id="receiveSpeed" aria-live="polite"></span>
+            </div>
+            <div class="progress-track" role="progressbar"
+              aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+              id="receiveProgressTrack">
+              <div class="progress-fill" id="receiveProgressFill"></div>
+            </div>
+            <div class="progress-stats">
+              <span id="receiveProgressBytes">0 B / 0 B</span>
+              <span id="receiveProgressPct">0%</span>
+            </div>
+          </div>
+
+          <!-- Success Animation -->
+          <div class="success-animation" id="receiveSuccess">
+            <div class="success-icon" aria-hidden="true">🎉</div>
+            <h3>File received!</h3>
+            <p id="receiveSuccessMsg">Your file is downloading now.</p>
+            <button class="btn btn-primary" id="receiveAgainBtn" type="button">
+              Receive Another File
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bottom Banner Ad -->
+      <div class="ad-container bottom-ad" aria-label="Advertisement">
+        <div class="ad-placeholder">
+          <span>Advertisement</span>
+          <p>Bottom Banner (728x90)</p>
+          <!-- TODO: Insert Bottom AdSense code here -->
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Right Sidebar Ad -->
+    <aside class="ad-sidebar">
+      <div class="ad-placeholder vertical">
+        <span>Advertisement</span>
+        <p>Skyscraper<br>(160x600)</p>
+        <!-- TODO: Insert Right AdSense code here -->
+      </div>
+    </aside>
+
+  </div> <!-- End layout-wrapper -->
+
+  <!-- Footer -->
+    <footer class="footer">
+      <span>© 2026 me2u · Made with ❤️ &amp; WebRTC</span>
+      <div class="footer-links">
+        <a href="#" aria-label="Privacy policy">Privacy</a>
+        <a href="#" aria-label="How it works">How it works</a>
+        <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="Source code on GitHub">GitHub</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
