@@ -339,8 +339,7 @@ function handleFileSelected(file) {
 function initSenderPeer() {
   destroyPeer(); // clean up any previous instance
 
-  const id = generateSecureId();
-  const peer = new Peer(id, PEERJS_CONFIG);
+  const peer = new Peer(PEERJS_CONFIG);
   state.peer = peer;
 
   peer.on('open', (assignedId) => {
@@ -532,7 +531,7 @@ function connectToSender(rawInput) {
 
   destroyPeer();
 
-  const peer = new Peer(generateSecureId(), PEERJS_CONFIG);
+  const peer = new Peer(PEERJS_CONFIG);
   state.peer = peer;
 
   peer.on('open', () => {
