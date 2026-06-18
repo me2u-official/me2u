@@ -90,11 +90,9 @@ function hideStatus(id) {
    Utility Functions
    ──────────────────────────────────────────────────────────── */
 
-/** Cryptographically secure random ID */
 function generateSecureId() {
-  const arr = new Uint8Array(12);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+  // Prepend 'p' to ensure it always starts with a letter (PeerJS requirement)
+  return 'p' + crypto.randomUUID().replace(/-/g, '');
 }
 
 /** Extract peer ID from a full share URL or raw code */
@@ -339,7 +337,8 @@ function handleFileSelected(file) {
 function initSenderPeer() {
   destroyPeer(); // clean up any previous instance
 
-  const peer = new Peer(PEERJS_CONFIG);
+  const id = generateSecureId();
+  const peer = new Peer(id, PEERJS_CONFIG);
   state.peer = peer;
 
   peer.on('open', (assignedId) => {
@@ -531,7 +530,7 @@ function connectToSender(rawInput) {
 
   destroyPeer();
 
-  const peer = new Peer(PEERJS_CONFIG);
+  const peer = new Peer(generateSecureId(), PEERJS_CONFIG);
   state.peer = peer;
 
   peer.on('open', () => {
