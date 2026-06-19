@@ -51,7 +51,7 @@ const PEERJS_CONFIG = {
     ]
   }
 };
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 let retryCount = 0;
 
 /* ────────────────────────────────────────────────────────────
@@ -411,7 +411,7 @@ function initSenderPeer() {
       retryCount++;
       showStatus('sendStatus', `Connection issue, retrying (${retryCount}/${MAX_RETRIES})…`, 'warn');
       destroyPeer();
-      setTimeout(() => initSenderPeer(), 1500 * retryCount);
+      setTimeout(() => initSenderPeer(), 2000 * retryCount);
     } else {
       showStatus('sendStatus', `Connection error: ${safeMsg}`, 'error');
       retryCount = 0;
@@ -501,11 +501,28 @@ function beginChunking(conn) {
 
   showStatus('sendStatus', '✅ Receiver accepted! Transferring…', 'success');
 
+  const dc = conn.dataChannel;
+  const BUFFER_THRESHOLD = 1024 * 1024; // 1 MB
+  if (dc) {
+    dc.bufferedAmountLowThreshold = BUFFER_THRESHOLD;
+  }
+
   // Chunked file reading via FileReader API
   let offset = 0;
+  let isPaused = false;
 
   function sendNextChunk() {
     if (offset >= file.size) return; // All chunks sent; wait for ACK
+
+    // Backpressure: If the underlying channel buffer is full, pause sending chunks
+    if (dc && dc.bufferedAmount > BUFFER_THRESHOLD) {
+      if (!isPaused) {
+        isPaused = true;
+        dc.addEventListener('bufferedamountlow', onBufferLow, { once: true });
+      }
+      return;
+    }
+
     const slice = file.slice(offset, offset + CHUNK_SIZE);
     const reader = new FileReader();
 
@@ -526,6 +543,11 @@ function beginChunking(conn) {
     };
 
     reader.readAsArrayBuffer(slice);
+  }
+
+  function onBufferLow() {
+    isPaused = false;
+    sendNextChunk();
   }
 
   sendNextChunk();
@@ -610,7 +632,12 @@ function setupReceiverConnection(conn) {
       setText('incomingFileMeta', `${formatBytes(data.size)} · ${data.mimeType || 'Unknown type'}`);
       getEl('incomingFileTypeIcon').textContent = fileTypeIcon(safeName, data.mimeType);
 
-      hideStatus('receiveStatus');
+      // Mobile RAM limit warning if showSaveFilePicker is not supported
+      if (!('showSaveFilePicker' in window) && data.size > 150 * 1024 * 1024) {
+        showStatus('receiveStatus', '⚠️ Warning: Mobile browsers have strict RAM limits. Files > 150MB may crash the browser tab. We suggest using a desktop browser (Chrome/Edge) for large files.', 'warn');
+      } else {
+        hideStatus('receiveStatus');
+      }
       
       const acceptBtn = getEl('acceptDownloadBtn');
       if (acceptBtn) {
@@ -874,6 +901,9 @@ function checkUrlForCode() {
    App Bootstrap
    ──────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  // Wake up signaling server if sleeping
+  pingSignalingServer();
+
   // Particles
   initParticles();
 
@@ -964,3 +994,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cleanup on tab/window close
   window.addEventListener('beforeunload', destroyPeer);
 });
+
+async function pingSignalingServer() {
+  try {
+    // Send a silent check request to Render signaling server to wake it up
+    await fetch('https://me2u-signal.onrender.com/me2u', { mode: 'no-cors' });
+    console.log('[*] Signaling server pinged.');
+  } catch (e) {
+    console.warn('[*] Failed to ping signaling server:', e);
+  }
+}
