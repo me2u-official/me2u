@@ -20,6 +20,10 @@ const CHUNK_SIZE    = 64 * 1024;   // 64 KB per WebRTC chunk
 const CONNECT_TIMEOUT_MS = 60_000; // 60s timeout for waiting
 const MAX_FILE_SIZE_BYTES = 0;     // 0 = no limit (P2P, unlimited)
 const PEERJS_CONFIG = {
+  host: 'me2u-signal.onrender.com',
+  port: 443,
+  secure: true,
+  path: '/me2u',
   pingInterval: 5000,
   debug: 1,
   config: {
