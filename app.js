@@ -73,6 +73,10 @@ const state = {
   downloadUrl:  null,
   writableStream: null,
   fallbackChunks: [],
+  isPausedByReceiver: false,
+  pendingWritesCount: 0,
+  isSenderPaused:     false,
+  resumeSender:       null,
 };
 
 /* ────────────────────────────────────────────────────────────
@@ -458,6 +462,15 @@ function setupSenderConnection(conn) {
       beginChunking(conn);
     } else if (data && data.type === 'ack-done') {
       markSendComplete();
+    } else if (data && data.type === 'pause-transfer') {
+      state.isPausedByReceiver = true;
+    } else if (data && data.type === 'resume-transfer') {
+      if (state.isPausedByReceiver) {
+        state.isPausedByReceiver = false;
+        if (state.resumeSender) {
+          state.resumeSender();
+        }
+      }
     }
   });
 
@@ -509,15 +522,20 @@ function beginChunking(conn) {
 
   // Chunked file reading via FileReader API
   let offset = 0;
-  let isPaused = false;
+  let isNetworkPaused = false;
+
+  state.isPausedByReceiver = false;
 
   function sendNextChunk() {
     if (offset >= file.size) return; // All chunks sent; wait for ACK
 
-    // Backpressure: If the underlying channel buffer is full, pause sending chunks
+    // 1. Receiver-side backpressure (disk busy writing)
+    if (state.isPausedByReceiver) return;
+
+    // 2. Sender-side backpressure (network buffer full)
     if (dc && dc.bufferedAmount > BUFFER_THRESHOLD) {
-      if (!isPaused) {
-        isPaused = true;
+      if (!isNetworkPaused) {
+        isNetworkPaused = true;
         dc.addEventListener('bufferedamountlow', onBufferLow, { once: true });
       }
       return;
@@ -546,10 +564,11 @@ function beginChunking(conn) {
   }
 
   function onBufferLow() {
-    isPaused = false;
+    isNetworkPaused = false;
     sendNextChunk();
   }
 
+  state.resumeSender = sendNextChunk;
   sendNextChunk();
 }
 
@@ -617,6 +636,8 @@ function setupReceiverConnection(conn) {
     state.receivedBytes  = 0;
     state.totalBytes     = 0;
     state.startTime      = Date.now();
+    state.pendingWritesCount = 0;
+    state.isSenderPaused = false;
   });
 
   conn.on('data', async (data) => {
@@ -666,18 +687,40 @@ function setupReceiverConnection(conn) {
       state.receivedBytes += data.data.byteLength;
       
       if (state.writableStream) {
-        // Queue the write operation
-        state.writableStream.write(data.data).catch(console.error);
+        state.pendingWritesCount++;
+        
+        // Backpressure: if disk write queue builds up (> 32 chunks / ~2MB), pause the sender
+        if (state.pendingWritesCount > 32 && !state.isSenderPaused) {
+          state.isSenderPaused = true;
+          conn.send({ type: 'pause-transfer' });
+        }
+
+        state.writableStream.write(data.data).then(() => {
+          state.pendingWritesCount--;
+          
+          // Resume sender when queue drops below low-watermark (8 chunks / 512KB)
+          if (state.pendingWritesCount <= 8 && state.isSenderPaused) {
+            state.isSenderPaused = false;
+            conn.send({ type: 'resume-transfer' });
+          }
+
+          // If all chunks received and all writes flushed, assemble and complete
+          if (state.receivedBytes >= state.totalBytes && state.pendingWritesCount === 0) {
+            assembleAndDownload(conn);
+          }
+        }).catch(err => {
+          console.error('Disk write error:', err);
+          showStatus('receiveStatus', '❌ Failed to write file to disk. Check disk space.', 'error');
+        });
+
       } else {
         state.fallbackChunks.push(data.data);
+        if (state.receivedBytes >= state.totalBytes) {
+          assembleAndDownload(conn);
+        }
       }
 
       updateProgress('receive', state.receivedBytes, state.totalBytes);
-
-      if (state.receivedBytes >= state.totalBytes) {
-        // All chunks received
-        assembleAndDownload(conn);
-      }
     }
   });
 
