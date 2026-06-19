@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="styles.css?v=2">
   <!-- PeerJS for WebRTC -->
   <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
-  <script src="app.js?v=8" defer></script>
+  <script src="app.js?v=9" defer></script>
 </head>
 <body>
   <!-- Animated Background -->
@@ -74,7 +74,13 @@
           <div class="security-badges" aria-label="Security features">
             <span class="badge"><span class="badge-dot" style="background:#6c63ff;box-shadow:0 0 6px #6c63ff"></span>WebRTC Encrypted</span>
             <span class="badge"><span class="badge-dot" style="background:#00ff9d;box-shadow:0 0 6px #00ff9d"></span>No Server Storage</span>
-            <span class="badge"><span class="badge-dot" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff"></span>Any File Size</span>
+            <span class="badge"><span class="badge-dot" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff"></span>Any Size Supported</span>
+          </div>
+
+          <!-- P2P Info Tip -->
+          <div class="info-tip" style="margin-top: 15px; margin-bottom: 5px; font-size: 12px; color: var(--text-secondary); background: rgba(108, 99, 255, 0.08); border: 1px solid rgba(108, 99, 255, 0.2); border-radius: 8px; padding: 10px; display: flex; gap: 8px; align-items: flex-start; text-align: left;">
+            <span>💡</span>
+            <span><strong>Sending 20GB+ files?</strong> Ensure the recipient uses a desktop browser supporting disk streaming (Chrome, Edge, or Opera) to prevent browser crashes.</span>
           </div>
 
           <!-- Drop Zone -->
@@ -203,6 +209,12 @@
             <button class="btn btn-primary" id="connectBtn" type="button">
               <span>📥</span> <span>Connect & Receive</span>
             </button>
+          </div>
+
+          <!-- P2P Info Tip -->
+          <div class="info-tip" style="margin-top: 15px; margin-bottom: 15px; font-size: 12px; color: var(--text-secondary); background: rgba(0, 212, 255, 0.08); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 8px; padding: 10px; display: flex; gap: 8px; align-items: flex-start; text-align: left;">
+            <span>💡</span>
+            <span><strong>Receiving 20GB+ files?</strong> You must use desktop Chrome, Edge, or Opera. Other browsers (and mobile devices) lack disk streaming and will crash on transfers larger than 150MB.</span>
           </div>
 
           <!-- Status Message -->
