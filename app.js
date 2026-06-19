@@ -20,18 +20,35 @@ const CHUNK_SIZE    = 64 * 1024;   // 64 KB per WebRTC chunk
 const CONNECT_TIMEOUT_MS = 60_000; // 60s timeout for waiting
 const MAX_FILE_SIZE_BYTES = 0;     // 0 = no limit (P2P, unlimited)
 const PEERJS_CONFIG = {
-  host: '0.peerjs.com',
-  port: 443,
-  secure: true,
   pingInterval: 5000,
   debug: 1,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
     ]
   }
 };
+const MAX_RETRIES = 3;
+let retryCount = 0;
 
 /* ────────────────────────────────────────────────────────────
    State
@@ -95,8 +112,10 @@ function hideStatus(id) {
    ──────────────────────────────────────────────────────────── */
 
 function generateSecureId() {
-  // Return a 12-character lowercase alphanumeric string starting with 'p'
-  return 'p' + Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 7);
+  // Return a 16-character hex string using crypto API for uniqueness
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Extract peer ID from a full share URL or raw code */
@@ -105,10 +124,10 @@ function extractPeerId(input) {
   try {
     const url = new URL(trimmed);
     const code = url.searchParams.get('code');
-    if (code && /^[0-9a-f]{24}$/.test(code)) return code;
+    if (code && /^[a-z0-9]{6,24}$/.test(code)) return code;
   } catch (_) { /* not a URL */ }
-  // Accept raw hex code
-  if (/^[0-9a-f]{24}$/.test(trimmed)) return trimmed;
+  // Accept raw code (alphanumeric, 6-24 chars)
+  if (/^[a-z0-9]{6,24}$/.test(trimmed)) return trimmed;
   return null;
 }
 
@@ -384,11 +403,21 @@ function initSenderPeer() {
 
   peer.on('error', (err) => {
     const safeMsg = sanitiseErrorMessage(err.type || 'error');
-    showStatus('sendStatus', `Connection error: ${safeMsg}`, 'error');
-    destroyPeer();
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      showStatus('sendStatus', `Connection issue, retrying (${retryCount}/${MAX_RETRIES})…`, 'warn');
+      destroyPeer();
+      setTimeout(() => initSenderPeer(), 1500 * retryCount);
+    } else {
+      showStatus('sendStatus', `Connection error: ${safeMsg}`, 'error');
+      retryCount = 0;
+      destroyPeer();
+    }
   });
 
-  peer.on('disconnected', () => peer.reconnect());
+  peer.on('disconnected', () => {
+    try { peer.reconnect(); } catch(_) {}
+  });
 }
 
 /** Map PeerJS error types to safe, user-friendly messages */
