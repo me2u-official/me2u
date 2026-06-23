@@ -322,12 +322,29 @@ body {
   overflow: hidden;
   animation: fadeInUp var(--dur-slow) 350ms var(--ease-spring) both;
   transition: border-color var(--dur-normal) var(--ease-smooth),
-              box-shadow var(--dur-normal) var(--ease-smooth);
+              box-shadow var(--dur-normal) var(--ease-smooth),
+              transform 0.15s ease-out;
+  transform-style: preserve-3d;
 }
 
 .card:hover {
   border-color: var(--border-glow);
   box-shadow: var(--shadow-card), var(--shadow-glow-purple);
+}
+
+/* Float children on Z-axis when card tilts for 3D parallax depth */
+.card .security-badges,
+.card .drop-zone,
+.card .file-preview,
+.card .card-actions,
+.card .waiting-indicator,
+.card .share-section,
+.card .progress-section,
+.card .success-animation,
+.card .code-input-wrap,
+.card .info-tip {
+  transform: translateZ(25px);
+  transition: transform 0.15s ease-out;
 }
 
 /* ─── Drop Zone ──────────────────────────────────────────── */
