@@ -459,7 +459,7 @@ function setupSenderConnection(conn) {
   conn.on('data', (data) => {
     if (data && data.type === 'ack-accept') {
       hideStatus('sendStatus');
-      beginChunking(conn);
+      beginChunking(conn, data.resumeOffset || 0);
     } else if (data && data.type === 'ack-done') {
       markSendComplete();
     } else if (data && data.type === 'pause-transfer') {
@@ -476,7 +476,7 @@ function setupSenderConnection(conn) {
 
   conn.on('close', () => {
     if (state.sentBytes < state.totalBytes) {
-      showStatus('sendStatus', '❌ Receiver disconnected before transfer completed.', 'error');
+      showStatus('sendStatus', '⚠️ Connection lost. Keep this tab open; the receiver can reconnect to resume the transfer.', 'warn');
     }
   });
 
@@ -508,7 +508,7 @@ function startSending(conn) {
   showStatus('sendStatus', 'Waiting for receiver to accept the file...', 'info');
 }
 
-function beginChunking(conn) {
+function beginChunking(conn, startOffset = 0) {
   const file = state.file;
   if (!file) return;
 
@@ -521,7 +521,7 @@ function beginChunking(conn) {
   }
 
   // Chunked file reading via FileReader API
-  let offset = 0;
+  let offset = startOffset;
   let isNetworkPaused = false;
 
   state.isPausedByReceiver = false;
@@ -631,13 +631,14 @@ function connectToSender(rawInput) {
 function setupReceiverConnection(conn) {
   conn.on('open', () => {
     showStatus('receiveStatus', '✅ Connected! Waiting for file info…', 'success');
-    state.fallbackChunks = [];
-    state.writableStream = null;
-    state.receivedBytes  = 0;
-    state.totalBytes     = 0;
-    state.startTime      = Date.now();
-    state.pendingWritesCount = 0;
-    state.isSenderPaused = false;
+    if (state.receivedBytes === 0) {
+      state.fallbackChunks = [];
+      state.writableStream = null;
+      state.totalBytes     = 0;
+      state.pendingWritesCount = 0;
+      state.isSenderPaused = false;
+    }
+    state.startTime = Date.now();
   });
 
   conn.on('data', async (data) => {
@@ -653,34 +654,54 @@ function setupReceiverConnection(conn) {
       setText('incomingFileMeta', `${formatBytes(data.size)} · ${data.mimeType || 'Unknown type'}`);
       getEl('incomingFileTypeIcon').textContent = fileTypeIcon(safeName, data.mimeType);
 
-      // Mobile RAM limit warning if showSaveFilePicker is not supported
-      if (!('showSaveFilePicker' in window) && data.size > 150 * 1024 * 1024) {
-        showStatus('receiveStatus', '⚠️ Warning: Mobile browsers have strict RAM limits. Files > 150MB may crash the browser tab. We suggest using a desktop browser (Chrome/Edge) for large files.', 'warn');
-      } else {
-        hideStatus('receiveStatus');
-      }
-      
-      const acceptBtn = getEl('acceptDownloadBtn');
-      if (acceptBtn) {
-        acceptBtn.style.display = 'block';
-        acceptBtn.onclick = async () => {
-          acceptBtn.style.display = 'none';
-          
-          if ('showSaveFilePicker' in window) {
-            try {
-              const handle = await window.showSaveFilePicker({ suggestedName: safeName });
-              state.writableStream = await handle.createWritable();
-            } catch (err) {
-              showStatus('receiveStatus', '❌ Download cancelled or failed to open file picker.', 'error');
-              return;
-            }
+      // If we already have bytes, this is a reconnection/resumption
+      if (state.receivedBytes > 0) {
+        showStatus('receiveStatus', `🔄 Connection restored! Resuming transfer from ${formatBytes(state.receivedBytes)}…`, 'success');
+        
+        if (state.writableStream) {
+          try {
+            await state.writableStream.seek(state.receivedBytes);
+          } catch (seekErr) {
+            console.error('Failed to seek stream, resuming may write from wrong offset:', seekErr);
           }
-          
-          state.startTime = Date.now();
-          getEl('receiveProgressSection').classList.add('visible');
-          updateProgress('receive', 0, state.totalBytes);
-          conn.send({ type: 'ack-accept' });
-        };
+        }
+        
+        state.startTime = Date.now();
+        getEl('receiveProgressSection').classList.add('visible');
+        conn.send({ type: 'ack-accept', resumeOffset: state.receivedBytes });
+      } else {
+        // Mobile RAM limit warning if showSaveFilePicker is not supported
+        if (!('showSaveFilePicker' in window) && data.size > 150 * 1024 * 1024) {
+          showStatus('receiveStatus', '⚠️ Warning: Mobile browsers have strict RAM limits. Files > 150MB may crash the browser tab. We suggest using a desktop browser (Chrome/Edge) for large files.', 'warn');
+        } else {
+          hideStatus('receiveStatus');
+        }
+        
+        const acceptBtn = getEl('acceptDownloadBtn');
+        if (acceptBtn) {
+          acceptBtn.style.display = 'block';
+          acceptBtn.onclick = async () => {
+            acceptBtn.style.display = 'none';
+            
+            if ('showSaveFilePicker' in window) {
+              try {
+                const handle = await window.showSaveFilePicker({ suggestedName: safeName });
+                state.writableStream = await handle.createWritable();
+              } catch (err) {
+                showStatus('receiveStatus', '❌ Download cancelled or failed to open file picker.', 'error');
+                return;
+              }
+            } else {
+              // Show foreground warning for mobile/Safari
+              showStatus('receiveStatus', '⚠️ Keep this page open in the foreground. Switching apps will interrupt the transfer.', 'warn');
+            }
+            
+            state.startTime = Date.now();
+            getEl('receiveProgressSection').classList.add('visible');
+            updateProgress('receive', 0, state.totalBytes);
+            conn.send({ type: 'ack-accept' });
+          };
+        }
       }
 
     } else if (data.type === 'chunk') {
@@ -726,7 +747,13 @@ function setupReceiverConnection(conn) {
 
   conn.on('close', () => {
     if (state.receivedBytes < state.totalBytes && state.totalBytes > 0) {
-      showStatus('receiveStatus', '❌ Sender disconnected before transfer completed.', 'error');
+      showStatus('receiveStatus', '❌ Connection lost. Make sure the sender tab is still open, and click "Reconnect & Resume" to try again.', 'error');
+      const connectBtn = getEl('connectBtn');
+      if (connectBtn) {
+        connectBtn.disabled = false;
+        const labelSpan = connectBtn.querySelector('span:nth-child(2)');
+        if (labelSpan) labelSpan.textContent = 'Reconnect & Resume';
+      }
     }
   });
 
@@ -854,7 +881,14 @@ function resetReceiveUI() {
   getEl('receiveProgressSection').classList.remove('visible');
   getEl('receiveSuccess').classList.remove('visible');
   getEl('codeInput').value = '';
-  getEl('connectBtn').disabled = false;
+  
+  const connectBtn = getEl('connectBtn');
+  if (connectBtn) {
+    connectBtn.disabled = false;
+    const labelSpan = connectBtn.querySelector('span:nth-child(2)');
+    if (labelSpan) labelSpan.textContent = 'Connect & Receive';
+  }
+  
   hideStatus('receiveStatus');
 
   const fill = getEl('receiveProgressFill');
