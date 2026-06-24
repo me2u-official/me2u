@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: me2u-signal
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: cd server && npm ci
+    startCommand: cd server && npm start
+    healthCheckPath: /me2u
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "9000"
+    autoDeploy: true
+    branch: main
+    rootDir: .

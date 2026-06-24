@@ -1,0 +1,16 @@
+{
+  "name": "me2u-signal",
+  "version": "1.0.0",
+  "description": "PeerJS signaling server for me2u",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "peer": "^1.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

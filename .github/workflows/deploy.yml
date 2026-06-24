@@ -1,0 +1,84 @@
+name: Deploy to Vercel & Render
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install signaling server dependencies
+        run: npm ci
+        working-directory: ./server
+
+      - name: Run signaling server tests
+        run: npm test --if-present
+        working-directory: ./server
+
+      - name: Validate HTML
+        uses: htmlhint/htmlhint-action@v1
+        with:
+          files: index.html
+
+      - name: Validate CSS
+        uses: stylelint/stylelint-action@v1
+        with:
+          files: styles.css
+
+      - name: Lint JavaScript
+        run: npx eslint app.js --no-eslintrc --env browser,es2022 --parser-options=ecmaVersion:2022,sourceType:module --no-inline-config --rule '{"no-unused-vars": "warn", "no-undef": "off"}'
+
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-signaling:
+    name: Deploy Signaling Server to Render
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        uses: render-actions/deploy@v1
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
