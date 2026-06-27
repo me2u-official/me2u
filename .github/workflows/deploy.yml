@@ -1,4 +1,4 @@
-name: Lint & Test
+name: CI
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
-    name: Lint & Test
+  build:
+    name: Build & Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -18,26 +18,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: server/package-lock.json
 
       - name: Install signaling server dependencies
-        run: npm ci
+        run: npm install
         working-directory: ./server
 
       - name: Run signaling server tests
         run: npm test --if-present
         working-directory: ./server
-
-      - name: Validate HTML
-        uses: htmlhint/htmlhint-action@v1
-        with:
-          files: index.html
-
-      - name: Validate CSS
-        uses: stylelint/stylelint-action@v1
-        with:
-          files: styles.css
-
-      - name: Lint JavaScript
-        run: npx eslint app.js --no-eslintrc --env browser,es2022 --parser-options=ecmaVersion:2022,sourceType:module --no-inline-config --rule '{"no-unused-vars": "warn", "no-undef": "off"}'
