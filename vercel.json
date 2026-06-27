@@ -4,10 +4,7 @@
   "framework": null,
   "buildCommand": "echo 'Static site - no build required'",
   "outputDirectory": ".",
-  "devCommand": "python -m http.server 8080",
   "installCommand": "echo 'No dependencies to install'",
-  "regions": ["iad1"],
-  "functions": {},
   "headers": [
     {
       "source": "/(.*)",
@@ -33,19 +30,5 @@
         { "key": "Content-Type", "value": "text/css; charset=utf-8" }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "env": {
-    "VITE_SIGNALING_URL": "@signaling-url"
-  },
-  "github": {
-    "enabled": true,
-    "autoAlias": true,
-    "silent": false
-  }
+  ]
 }
