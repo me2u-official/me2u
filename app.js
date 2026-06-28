@@ -698,10 +698,9 @@ function setupReceiverConnection(conn) {
       setText('incomingFileMeta', `${formatBytes(data.size)} · ${data.mimeType || 'Unknown type'}`);
       getEl('incomingFileTypeIcon').textContent = fileTypeIcon(safeName, data.mimeType);
 
-      // Show file count if multiple
-      if (state.pendingFiles.length > 0) {
-        const msg = `File ${fileIndex + 1} of ${state.pendingFiles.length + 1}`;
-        showStatus('receiveStatus', msg, 'info');
+      // If multiple files, show which file we're on
+      if (fileIndex > 0) {
+        showStatus('receiveStatus', `Receiving file ${fileIndex + 1}...`, 'info');
       }
 
       // If we already have bytes, this is a reconnection/resumption
