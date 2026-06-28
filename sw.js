@@ -1,5 +1,5 @@
 const CACHE = 'me2u-v1';
-const FILES = ['/', '/index.html', '/app.js', '/styles.css', '/manifest.json'];
+const FILES = ['/', '/index.html', '/app.js', '/styles.css', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));

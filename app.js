@@ -523,9 +523,9 @@ function sendNextFileMeta(conn) {
   getEl('sendProgressSection').classList.add('visible');
   updateProgress('send', 0, state.totalBytes);
 
+  // Show file count for multi-file
   if (state.files.length > 1) {
-    showStatus('sendStatus', `Sending file ${idx + 1} of ${state.files.length}...`, 'info');
-    setText('sendProgressLabel', `File ${idx + 1}/${state.files.length}`);
+    setText('sendProgressLabel', `File ${idx + 1} / ${state.files.length}`);
   }
 
   // Send metadata
@@ -537,7 +537,7 @@ function sendNextFileMeta(conn) {
     mimeType:  file.type || 'application/octet-stream',
   });
 
-  showStatus('sendStatus', 'Waiting for receiver to accept the file...', 'info');
+  showStatus('sendStatus', `File ${idx + 1}: Waiting for receiver to accept...`, 'info');
 }
 
 function beginChunking(conn, startOffset = 0) {
@@ -623,7 +623,7 @@ function allFilesSent(conn) {
   if (fill) fill.classList.add('done');
 
   const dot = getEl('sendStatusDot');
-  if (dot) { dot.classList.remove(); dot.className = 'progress-status-dot done'; }
+  if (dot) dot.className = 'progress-status-dot done';
 
   setText('sendProgressLabel', 'All files sent!');
   updateProgress('send', state.totalBytes, state.totalBytes);
@@ -698,9 +698,10 @@ function setupReceiverConnection(conn) {
       setText('incomingFileMeta', `${formatBytes(data.size)} · ${data.mimeType || 'Unknown type'}`);
       getEl('incomingFileTypeIcon').textContent = fileTypeIcon(safeName, data.mimeType);
 
-      // If multiple files, show which file we're on
+      // If multiple files, show which file we're on and hide previous success
       if (fileIndex > 0) {
         showStatus('receiveStatus', `Receiving file ${fileIndex + 1}...`, 'info');
+        getEl('receiveSuccess').classList.remove('visible');
       }
 
       // If we already have bytes, this is a reconnection/resumption
@@ -860,6 +861,11 @@ async function assembleAndDownload(conn) {
   state.sessionTransfers++;
   updateStats();
 
+  // Reset so next file's meta handler doesn't think it's a reconnection
+  state.receivedBytes    = 0;
+  state.totalBytes       = 0;
+  state.isSenderPaused   = false;
+
   // Hide progress, show success briefly, then wait for next file
   getEl('receiveProgressSection').classList.remove('visible');
   getEl('receiveSuccess').classList.add('visible');
@@ -867,11 +873,6 @@ async function assembleAndDownload(conn) {
   // Send ack-done so sender moves to next file
   try { conn.send({ type: 'ack-done' }); } catch (_) { /* ignore */ }
 
-  // Auto-hide success after 3s to prepare for next file (if more coming)
-  setTimeout(() => {
-    getEl('receiveSuccess').classList.remove('visible');
-    getEl('incomingFilePreview').classList.remove('visible');
-  }, 3000);
 }
 
 /* ────────────────────────────────────────────────────────────
