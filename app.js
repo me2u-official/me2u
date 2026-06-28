@@ -20,11 +20,9 @@ const CHUNK_SIZE    = 64 * 1024;   // 64 KB per WebRTC chunk
 const CONNECT_TIMEOUT_MS = 60_000; // 60s timeout for waiting
 const MAX_FILE_SIZE_BYTES = 0;     // 0 = no limit (P2P, unlimited)
 
-// Read signaling URL from environment (injected by Vercel at build time)
-// Falls back to production URL for local development
-const SIGNALING_HOST = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SIGNALING_URL)
-  ? new URL(import.meta.env.VITE_SIGNALING_URL).host
-  : 'me2u-signal.onrender.com';
+// PeerJS signaling server
+// Change this to your Render URL (or 'localhost:9000' for local dev)
+const SIGNALING_HOST = 'me2u-signal.onrender.com';
 
 const PEERJS_CONFIG = {
   host: SIGNALING_HOST,
@@ -65,25 +63,27 @@ let retryCount = 0;
    State
    ──────────────────────────────────────────────────────────── */
 const state = {
-  peer:         null,
-  conn:         null,
-  file:         null,
-  mode:         'send',     // 'send' | 'receive'
-  totalBytes:   0,
-  sentBytes:    0,
-  receivedBytes:0,
-  chunks:       [],
-  startTime:    0,
-  connectTimer: null,
+  peer:             null,
+  conn:             null,
+  files:            [],       // array of selected files
+  currentFileIndex: 0,        // which file is being sent (sender)
+  mode:             'send',   // 'send' | 'receive'
+  totalBytes:       0,
+  sentBytes:        0,
+  receivedBytes:    0,
+  chunks:           [],
+  startTime:        0,
+  connectTimer:     null,
   sessionTransfers: 0,
   sessionDataSent:  0,
-  downloadUrl:  null,
-  writableStream: null,
-  fallbackChunks: [],
+  downloadUrl:      null,
+  writableStream:   null,
+  fallbackChunks:   [],
   isPausedByReceiver: false,
   pendingWritesCount: 0,
   isSenderPaused:     false,
   resumeSender:       null,
+  pendingFiles:       [],     // queue of incoming file metas (receiver)
 };
 
 /* ────────────────────────────────────────────────────────────
@@ -350,17 +350,26 @@ function switchMode(mode) {
 /* ────────────────────────────────────────────────────────────
    File Selection
    ──────────────────────────────────────────────────────────── */
-function handleFileSelected(file) {
-  if (!file) return;
-  state.file = file;
+function handleFilesSelected(files) {
+  if (!files || files.length === 0) return;
+  state.files = Array.from(files);
+  state.currentFileIndex = 0;
 
   // Show preview
   const preview = getEl('filePreview');
   preview.classList.add('visible');
 
-  setText('fileName', file.name);
-  setText('fileMeta', `${formatBytes(file.size)} · ${file.type || 'Unknown type'}`);
-  getEl('fileTypeIcon').textContent = fileTypeIcon(file.name, file.type);
+  const totalSize = state.files.reduce((s, f) => s + f.size, 0);
+  if (state.files.length === 1) {
+    const f = state.files[0];
+    setText('fileName', f.name);
+    setText('fileMeta', `${formatBytes(f.size)} · ${f.type || 'Unknown type'}`);
+    getEl('fileTypeIcon').textContent = fileTypeIcon(f.name, f.type);
+  } else {
+    setText('fileName', `${state.files.length} files selected`);
+    setText('fileMeta', `Total: ${formatBytes(totalSize)}`);
+    getEl('fileTypeIcon').textContent = '📦';
+  }
 
   getEl('startSendBtn').disabled = false;
   hideStatus('sendStatus');
@@ -468,7 +477,7 @@ function setupSenderConnection(conn) {
       hideStatus('sendStatus');
       beginChunking(conn, data.resumeOffset || 0);
     } else if (data && data.type === 'ack-done') {
-      markSendComplete();
+      markSendComplete(conn);
     } else if (data && data.type === 'pause-transfer') {
       state.isPausedByReceiver = true;
     } else if (data && data.type === 'resume-transfer') {
@@ -493,30 +502,46 @@ function setupSenderConnection(conn) {
 }
 
 function startSending(conn) {
-  const file = state.file;
-  if (!file) return;
+  if (state.files.length === 0) return;
+  state.currentFileIndex = 0;
+  sendNextFileMeta(conn);
+}
 
+function sendNextFileMeta(conn) {
+  const idx = state.currentFileIndex;
+  if (idx >= state.files.length) {
+    allFilesSent(conn);
+    return;
+  }
+
+  const file = state.files[idx];
   state.totalBytes = file.size;
   state.sentBytes  = 0;
   state.startTime  = Date.now();
 
-  // Show progress (zero state initially)
+  // Show progress
   getEl('sendProgressSection').classList.add('visible');
   updateProgress('send', 0, state.totalBytes);
 
-  // Send metadata first (no sensitive info, just name + size + type)
+  if (state.files.length > 1) {
+    showStatus('sendStatus', `Sending file ${idx + 1} of ${state.files.length}...`, 'info');
+    setText('sendProgressLabel', `File ${idx + 1}/${state.files.length}`);
+  }
+
+  // Send metadata
   conn.send({
-    type:     'meta',
-    name:     sanitiseFilename(file.name),
-    size:     file.size,
-    mimeType: file.type || 'application/octet-stream',
+    type:      'meta',
+    fileIndex: idx,
+    name:      sanitiseFilename(file.name),
+    size:      file.size,
+    mimeType:  file.type || 'application/octet-stream',
   });
 
   showStatus('sendStatus', 'Waiting for receiver to accept the file...', 'info');
 }
 
 function beginChunking(conn, startOffset = 0) {
-  const file = state.file;
+  const file = state.files[state.currentFileIndex];
   if (!file) return;
 
   showStatus('sendStatus', '✅ Receiver accepted! Transferring…', 'success');
@@ -579,17 +604,28 @@ function beginChunking(conn, startOffset = 0) {
   sendNextChunk();
 }
 
-function markSendComplete() {
+function markSendComplete(conn) {
   state.sessionTransfers++;
-  state.sessionDataSent += state.totalBytes;
+  state.sessionDataSent += state.files[state.currentFileIndex].size;
 
+  // Move to next file
+  state.currentFileIndex++;
+  if (state.currentFileIndex < state.files.length) {
+    sendNextFileMeta(conn);
+    return;
+  }
+
+  allFilesSent(conn);
+}
+
+function allFilesSent(conn) {
   const fill = getEl('sendProgressFill');
   if (fill) fill.classList.add('done');
 
   const dot = getEl('sendStatusDot');
   if (dot) { dot.classList.remove(); dot.className = 'progress-status-dot done'; }
 
-  setText('sendProgressLabel', 'Transfer complete!');
+  setText('sendProgressLabel', 'All files sent!');
   updateProgress('send', state.totalBytes, state.totalBytes);
   updateStats();
 
@@ -655,11 +691,18 @@ function setupReceiverConnection(conn) {
       // Received file metadata
       state.totalBytes = data.size || 0;
       const safeName   = sanitiseFilename(data.name || 'file');
+      const fileIndex  = data.fileIndex || 0;
 
       getEl('incomingFilePreview').classList.add('visible');
       setText('incomingFileName', safeName);
       setText('incomingFileMeta', `${formatBytes(data.size)} · ${data.mimeType || 'Unknown type'}`);
       getEl('incomingFileTypeIcon').textContent = fileTypeIcon(safeName, data.mimeType);
+
+      // Show file count if multiple
+      if (state.pendingFiles.length > 0) {
+        const msg = `File ${fileIndex + 1} of ${state.pendingFiles.length + 1}`;
+        showStatus('receiveStatus', msg, 'info');
+      }
 
       // If we already have bytes, this is a reconnection/resumption
       if (state.receivedBytes > 0) {
@@ -675,8 +718,15 @@ function setupReceiverConnection(conn) {
         
         state.startTime = Date.now();
         getEl('receiveProgressSection').classList.add('visible');
-        conn.send({ type: 'ack-accept', resumeOffset: state.receivedBytes });
+        conn.send({ type: 'ack-accept', resumeOffset: state.receivedBytes, fileIndex });
       } else {
+        // Reset per-file state
+        state.receivedBytes = 0;
+        state.fallbackChunks = [];
+        state.writableStream = null;
+        state.pendingWritesCount = 0;
+        state.isSenderPaused = false;
+
         // Mobile RAM limit warning if showSaveFilePicker is not supported
         if (!('showSaveFilePicker' in window) && data.size > 150 * 1024 * 1024) {
           showStatus('receiveStatus', '⚠️ Warning: Mobile browsers have strict RAM limits. Files > 150MB may crash the browser tab. We suggest using a desktop browser (Chrome/Edge) for large files.', 'warn');
@@ -706,7 +756,7 @@ function setupReceiverConnection(conn) {
             state.startTime = Date.now();
             getEl('receiveProgressSection').classList.add('visible');
             updateProgress('receive', 0, state.totalBytes);
-            conn.send({ type: 'ack-accept' });
+            conn.send({ type: 'ack-accept', fileIndex });
           };
         }
       }
@@ -776,9 +826,6 @@ async function assembleAndDownload(conn) {
   if (dot) dot.className = 'progress-status-dot done';
   setText('receiveProgressLabel', 'Download complete!');
 
-  // ACK sender
-  try { conn.send({ type: 'ack-done' }); } catch (_) { /* ignore */ }
-
   const nameEl = getEl('incomingFileName');
   const fileName = nameEl ? nameEl.textContent : 'download';
   const safeName = sanitiseFilename(fileName);
@@ -801,25 +848,31 @@ async function assembleAndDownload(conn) {
     a.click();
     document.body.removeChild(a);
 
-    // Revoke after delay to ensure download starts
     setTimeout(() => {
       URL.revokeObjectURL(url);
       state.downloadUrl = null;
     }, 10_000);
 
-    // Cleanup chunks from memory
     state.fallbackChunks = [];
     setText('receiveSuccessMsg', `"${safeName}" was saved to your Downloads folder.`);
   }
 
+  // Signal sender this file is done (sender will send next meta or finish)
   state.sessionTransfers++;
   updateStats();
 
+  // Hide progress, show success briefly, then wait for next file
+  getEl('receiveProgressSection').classList.remove('visible');
+  getEl('receiveSuccess').classList.add('visible');
+
+  // Send ack-done so sender moves to next file
+  try { conn.send({ type: 'ack-done' }); } catch (_) { /* ignore */ }
+
+  // Auto-hide success after 3s to prepare for next file (if more coming)
   setTimeout(() => {
-    getEl('receiveProgressSection').classList.remove('visible');
-    getEl('receiveSuccess').classList.add('visible');
-    setText('receiveSuccessMsg', `"${safeName}" was saved to your Downloads folder.`);
-  }, 800);
+    getEl('receiveSuccess').classList.remove('visible');
+    getEl('incomingFilePreview').classList.remove('visible');
+  }, 3000);
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -856,7 +909,8 @@ function destroyPeer() {
 }
 
 function resetSendUI() {
-  state.file      = null;
+  state.files = [];
+  state.currentFileIndex = 0;
   state.sentBytes = 0;
   state.totalBytes = 0;
   state.chunks    = [];
@@ -879,6 +933,7 @@ function resetSendUI() {
 function resetReceiveUI() {
   destroyPeer();
   state.fallbackChunks = [];
+  state.pendingFiles = [];
   if (state.writableStream) {
     state.writableStream.close().catch(()=>{}).finally(()=>{ state.writableStream = null; });
   }
@@ -954,8 +1009,8 @@ function initDropZone() {
     e.preventDefault();
     e.stopPropagation();
     zone.classList.remove('drag-over');
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleFileSelected(file);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) handleFilesSelected(files);
   });
 
   zone.addEventListener('keydown', (e) => {
@@ -1017,8 +1072,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   getEl('fileInput').addEventListener('change', (e) => {
-    const file = e.target.files?.[0];
-    if (file) handleFileSelected(file);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFilesSelected(e.target.files);
+    }
   });
 
   // Remove file
@@ -1029,8 +1085,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Start send (generate link)
   getEl('startSendBtn').addEventListener('click', () => {
-    if (!state.file) {
-      showStatus('sendStatus', '⚠️ Please select a file first.', 'warn');
+    if (state.files.length === 0) {
+      showStatus('sendStatus', '⚠️ Please select files first.', 'warn');
       return;
     }
     getEl('startSendBtn').disabled = true;
@@ -1052,6 +1108,21 @@ document.addEventListener('DOMContentLoaded', () => {
   getEl('shareLinkInput').addEventListener('click', function () {
     this.select();
   });
+
+  // Native share (mobile)
+  const shareLinkInput = getEl('shareLinkInput');
+  if (navigator.share && shareLinkInput) {
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'copy-btn';
+    shareBtn.style.marginTop = '8px';
+    shareBtn.innerHTML = '<span>📤</span> <span>Share</span>';
+    shareBtn.addEventListener('click', async () => {
+      if (shareLinkInput.value) {
+        try { await navigator.share({ url: shareLinkInput.value }); } catch (_) {}
+      }
+    });
+    getEl('shareSection')?.appendChild(shareBtn);
+  }
 
   // Receive: connect
   getEl('connectBtn').addEventListener('click', () => {

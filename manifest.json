@@ -1,0 +1,17 @@
+{
+  "name": "me2u",
+  "short_name": "me2u",
+  "description": "Send files to anyone, anywhere. Direct P2P in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07080f",
+  "theme_color": "#07080f",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

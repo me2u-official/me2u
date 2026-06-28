@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="me2u — Send files to anyone, anywhere in the world. Instant P2P transfers directly in your browser. No signup, no limits, fully encrypted.">
   <meta name="theme-color" content="#07080f">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>me2u — Send Files to Anyone, Instantly</title>
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
   <!-- PeerJS for WebRTC -->
   <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
-  <script src="app.js?v=11" defer></script>
+  <script src="app.js?v=12" defer></script>
 </head>
 <body>
   <!-- Animated Background -->
@@ -87,12 +92,12 @@
           <div class="drop-zone" id="dropZone" role="button" tabindex="0"
             aria-label="Drop zone: click or drag a file to send">
             <div class="drop-zone-icon" aria-hidden="true">📁</div>
-            <p class="drop-zone-title">Drop your file here</p>
+            <p class="drop-zone-title">Drop your files here</p>
             <p class="drop-zone-sub">or click to browse · any size, any type</p>
             <button class="btn btn-primary" id="browseBtn" type="button">
-              <span>Choose File</span> <span aria-hidden="true">→</span>
+              <span>Choose Files</span> <span aria-hidden="true">→</span>
             </button>
-            <input type="file" id="fileInput" aria-hidden="true">
+            <input type="file" id="fileInput" multiple aria-hidden="true">
           </div>
 
           <!-- File Preview -->
@@ -297,5 +302,10 @@
       </div>
     </footer>
   </div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
 </body>
 </html>
