@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="me2u Privacy Policy — How we handle your data. Zero storage, encrypted transfers, no tracking.">
+  <meta name="theme-color" content="#07080f">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>Privacy Policy · me2u</title>
+  <style>
+    .page-content {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      animation: fadeInUp var(--dur-slow) var(--ease-spring) both;
+    }
+    .page-content h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+    .page-content .last-updated {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-bottom: 40px;
+    }
+    .page-content h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-top: 40px;
+      margin-bottom: 12px;
+      color: var(--neon-cyan);
+    }
+    .page-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-top: 28px;
+      margin-bottom: 8px;
+    }
+    .page-content p, .page-content li {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .page-content ul, .page-content ol {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    .page-content li { margin-bottom: 8px; }
+    .page-content strong { color: var(--text-primary); font-weight: 600; }
+    .page-content .highlight-box {
+      background: rgba(108, 99, 255, 0.06);
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .page-content .highlight-box p { margin-bottom: 0; }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 32px;
+      transition: color var(--dur-fast);
+    }
+    .back-link:hover { color: var(--neon-purple); }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+
+  <div class="wrapper">
+    <header class="header">
+      <a href="/" class="logo" aria-label="me2u home">
+        <div class="logo-icon" aria-hidden="true">📡</div>
+        <span class="logo-text">me2u</span>
+      </a>
+      <span class="header-badge">E2E Encrypted · P2P</span>
+    </header>
+
+    <main class="page-content">
+      <a href="/" class="back-link">← Back to app</a>
+      <h1>Privacy Policy</h1>
+      <p class="last-updated">Last updated: June 28, 2026</p>
+
+      <div class="highlight-box">
+        <p><strong>Short version:</strong> me2u never stores your files. They go directly from the sender to the receiver — we can't see them, we can't access them. No accounts, no tracking, no data collection.</p>
+      </div>
+
+      <h2>1. What me2u is</h2>
+      <p>me2u is a peer-to-peer (P2P) file-sharing tool that runs entirely in your browser. It uses WebRTC technology to transfer files directly between devices — no intermediary server stores, processes, or even sees your file contents.</p>
+
+      <h2>2. What data we process</h2>
+      <p>Because me2u has no accounts, no databases, and no file storage, the data we handle is minimal:</p>
+      <ul>
+        <li><strong>Signaling server (PeerJS):</strong> When you create or join a session, your browser connects to our signaling server at <code>me2u-signal.onrender.com</code>. This server coordinates the initial handshake between peers so they can find each other. It receives your IP address and a randomly generated session ID. <strong>No file data, file names, or file sizes ever pass through the signaling server.</strong></li>
+        <li><strong>STUN/TURN servers:</strong> WebRTC uses public STUN servers (Google) and TURN relays (openrelay.metered.ca) to establish the P2P connection. These servers see your IP address during the connection process. If a direct P2P connection can't be established, data may be relayed through the TURN server — the relay sees encrypted traffic but <strong>cannot decrypt or read its contents</strong> (WebRTC uses DTLS encryption).</li>
+        <li><strong>QR code generation:</strong> We use the <code>api.qrserver.com</code> service to generate QR codes. Your share URL is sent to this service to create the QR image. This URL contains only the session ID — no file information.</li>
+      </ul>
+
+      <h2>3. What we do NOT collect</h2>
+      <ul>
+        <li>❌ No accounts or registration</li>
+        <li>❌ No cookies or tracking scripts</li>
+        <li>❌ No analytics or telemetry</li>
+        <li>❌ No file data (names, sizes, contents, or metadata)</li>
+        <li>❌ No IP logging (beyond what the signaling server requires for the connection)</li>
+        <li>❌ No email addresses or personal identifiers</li>
+      </ul>
+
+      <h2>4. How file transfers work (for your privacy)</h2>
+      <ol>
+        <li><strong>Your files stay on your device.</strong> They are never uploaded to any server.</li>
+        <li><strong>Encrypted in transit.</strong> WebRTC uses mandatory DTLS (Datagram Transport Layer Security) encryption — the same technology that secures HTTPS. Data is encrypted before it leaves your browser and decrypted only by the recipient's browser.</li>
+        <li><strong>Zero-knowledge.</strong> The signaling server doesn't know what files are being transferred, their sizes, or even that a transfer is happening. It only brokers the connection.</li>
+        <li><strong>No intermediate storage.</strong> File data flows directly from sender to receiver. It is never written to any disk on our side.</li>
+        <li><strong>Session IDs are random.</strong> The session code is a cryptographically random 16-character hex string generated by your browser. It cannot be used to identify you or your files.</li>
+      </ol>
+
+      <h2>5. Third-party services</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;color:var(--text-secondary);margin-bottom:24px;">
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:8px 12px;color:var(--text-primary);font-weight:600;">Service</th>
+          <th style="text-align:left;padding:8px 12px;color:var(--text-primary);font-weight:600;">Purpose</th>
+          <th style="text-align:left;padding:8px 12px;color:var(--text-primary);font-weight:600;">Data shared</th>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">Render (signaling server)</td>
+          <td style="padding:8px 12px;">PeerJS hosting</td>
+          <td style="padding:8px 12px;">IP address, session ID</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">Google STUN</td>
+          <td style="padding:8px 12px;">NAT traversal</td>
+          <td style="padding:8px 12px;">IP address</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">Metered.ca TURN</td>
+          <td style="padding:8px 12px;">P2P relay fallback</td>
+          <td style="padding:8px 12px;">IP address, encrypted relay traffic</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;">QR Server (goqr.me)</td>
+          <td style="padding:8px 12px;">QR code generation</td>
+          <td style="padding:8px 12px;">Share URL (session ID only)</td>
+        </tr>
+      </table>
+
+      <h2>6. Data retention</h2>
+      <p><strong>We retain no data.</strong> Signaling server logs are ephemeral and used only for operational purposes. Session IDs expire when the connection closes. No transfer history, file metadata, or user records are stored.</p>
+
+      <h2>7. Your rights</h2>
+      <p>Since we collect no personal data, there is nothing to access, modify, or delete. If you have questions about this policy, open an issue on our <a href="https://github.com/me2u-official/me2u" target="_blank" rel="noopener noreferrer" style="color:var(--neon-cyan);">GitHub repository</a>.</p>
+
+      <h2>8. Changes to this policy</h2>
+      <p>If this policy changes, the "Last updated" date at the top will be revised. We encourage you to review it periodically.</p>
+    </main>
+
+    <footer class="footer">
+      <span>© 2026 me2u · Made with ❤️ &amp; WebRTC</span>
+      <div class="footer-links">
+        <a href="/privacy">Privacy</a>
+        <a href="/how-it-works">How it works</a>
+        <a href="https://github.com/me2u-official/me2u" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

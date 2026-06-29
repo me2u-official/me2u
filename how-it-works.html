@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="How me2u works — Direct, encrypted P2P file transfers in your browser. No sign-up, no storage, no limits.">
+  <meta name="theme-color" content="#07080f">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>How It Works · me2u</title>
+  <style>
+    .page-content {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      animation: fadeInUp var(--dur-slow) var(--ease-spring) both;
+    }
+    .page-content h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+    .page-content .subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      line-height: 1.6;
+    }
+    .page-content h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-top: 48px;
+      margin-bottom: 16px;
+      color: var(--neon-cyan);
+    }
+    .page-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+    .page-content p, .page-content li {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .page-content ul, .page-content ol {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    .page-content li { margin-bottom: 10px; }
+    .page-content strong { color: var(--text-primary); font-weight: 600; }
+    .page-content code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--neon-cyan);
+      background: rgba(0,212,255,0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .step-card {
+      display: flex;
+      gap: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: border-color var(--dur-normal);
+    }
+    .step-card:hover { border-color: var(--border-glow); }
+    .step-number {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      background: var(--grad-primary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: #fff;
+    }
+    .step-content { flex: 1; }
+    .step-content h3 { margin-top: 0; }
+    .step-content h3 .emoji { margin-right: 8px; }
+    .step-content p { margin-bottom: 0; }
+    .diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      margin: 32px 0;
+      text-align: center;
+    }
+    .diagram svg { max-width: 100%; height: auto; }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .feature-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+    }
+    .feature-item .icon { font-size: 28px; margin-bottom: 8px; }
+    .feature-item .label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .feature-item .desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-item h3 { font-size: 15px; margin: 0 0 8px 0; color: var(--text-primary); }
+    .faq-item p { margin-bottom: 0; font-size: 14px; }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 32px;
+      transition: color var(--dur-fast);
+    }
+    .back-link:hover { color: var(--neon-purple); }
+    @media (max-width: 600px) {
+      .feature-grid { grid-template-columns: 1fr; }
+      .step-card { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+
+  <div class="wrapper">
+    <header class="header">
+      <a href="/" class="logo" aria-label="me2u home">
+        <div class="logo-icon" aria-hidden="true">📡</div>
+        <span class="logo-text">me2u</span>
+      </a>
+      <span class="header-badge">E2E Encrypted · P2P</span>
+    </header>
+
+    <main class="page-content">
+      <a href="/" class="back-link">← Back to app</a>
+      <h1>How It Works</h1>
+      <p class="subtitle">me2u sends files directly between browsers — no server in between. Here's exactly how.</p>
+
+      <!-- Diagram -->
+      <div class="diagram">
+        <svg viewBox="0 0 640 140" xmlns="http://www.w3.org/2000/svg">
+          <!-- Sender -->
+          <rect x="20" y="40" width="140" height="60" rx="12" fill="rgba(108,99,255,0.12)" stroke="#6c63ff" stroke-width="2"/>
+          <text x="90" y="73" text-anchor="middle" fill="#f0f0ff" font-family="Outfit,sans-serif" font-size="14" font-weight="600">📤 Sender</text>
+          <text x="90" y="90" text-anchor="middle" fill="rgba(240,240,255,0.4)" font-family="Outfit,sans-serif" font-size="10">Your browser</text>
+
+          <!-- Arrow -->
+          <line x1="160" y1="70" x2="230" y2="70" stroke="#6c63ff" stroke-width="2" stroke-dasharray="6,3"/>
+          <polygon points="225,64 238,70 225,76" fill="#6c63ff"/>
+
+          <!-- Globe / Signal -->
+          <circle cx="280" cy="70" r="24" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.5"/>
+          <circle cx="280" cy="70" r="12" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.5"/>
+          <text x="280" y="74" text-anchor="middle" fill="#00d4ff" font-family="Outfit,sans-serif" font-size="10">🔗</text>
+
+          <!-- Arrow -->
+          <line x1="304" y1="70" x2="340" y2="70" stroke="#6c63ff" stroke-width="2" stroke-dasharray="6,3"/>
+          <polygon points="335,64 348,70 335,76" fill="#6c63ff"/>
+
+          <!-- Signaling -->
+          <rect x="200" y="100" width="160" height="30" rx="8" fill="rgba(0,212,255,0.06)" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
+          <text x="280" y="119" text-anchor="middle" fill="rgba(240,240,255,0.4)" font-family="Outfit,sans-serif" font-size="11">Signaling server (handshake only)</text>
+
+          <!-- Big arrow P2P -->
+          <line x1="350" y1="70" x2="460" y2="70" stroke="#00ff9d" stroke-width="3"/>
+          <polygon points="455,62 470,70 455,78" fill="#00ff9d"/>
+          <text x="405" y="55" text-anchor="middle" fill="#00ff9d" font-family="Outfit,sans-serif" font-size="9" font-weight="600">🔒 DTLS Encrypted</text>
+
+          <!-- Receiver -->
+          <rect x="470" y="40" width="140" height="60" rx="12" fill="rgba(0,255,157,0.08)" stroke="#00ff9d" stroke-width="2"/>
+          <text x="540" y="73" text-anchor="middle" fill="#f0f0ff" font-family="Outfit,sans-serif" font-size="14" font-weight="600">📥 Receiver</text>
+          <text x="540" y="90" text-anchor="middle" fill="rgba(240,240,255,0.4)" font-family="Outfit,sans-serif" font-size="10">Their browser</text>
+        </svg>
+      </div>
+
+      <h2>📤 For Senders</h2>
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3><span class="emoji">📁</span>Select your files</h3>
+          <p>Click the drop zone or drag and drop files. You can select multiple files at once — there's no size limit. Your files stay on your device; nothing is uploaded yet.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3><span class="emoji">🔗</span>Generate a link</h3>
+          <p>Click "Generate Link." Your browser creates a secure session with a random code and connects to the signaling server. A shareable link and QR code appear — send these to your recipient.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3><span class="emoji">📤</span>File transfers automatically</h3>
+          <p>Once the recipient opens your link and accepts the file, the transfer starts. Files are read in 64 KB chunks and sent directly to the receiver. You'll see real-time progress and speed.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h3><span class="emoji">✅</span>Done</h3>
+          <p>When all files are sent, you'll see a success message. The session ends — no data is stored anywhere.</p>
+        </div>
+      </div>
+
+      <h2>📥 For Receivers</h2>
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3><span class="emoji">🔗</span>Open the link</h3>
+          <p>Click the link the sender shared with you (or scan the QR code). The page will switch to receive mode and fill in the code automatically.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3><span class="emoji">📥</span>Click Connect</h3>
+          <p>The app connects to the sender via the signaling server. Once connected, you'll see the file details (name, size, type).</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3><span class="emoji">✅</span>Accept & download</h3>
+          <p>Click "Accept." On desktop Chrome/Edge, you'll be asked where to save the file (streams directly to disk). On other browsers, the file downloads automatically after transfer. Keep the page open until done.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h3><span class="emoji">🎉</span>Done</h3>
+          <p>Your file is saved. If the sender sent multiple files, the next one starts automatically.</p>
+        </div>
+      </div>
+
+      <h2>🔒 Security</h2>
+      <p>me2u is designed so that <strong>we cannot access your files even if we wanted to</strong>:</p>
+      <ul>
+        <li><strong>End-to-end encrypted.</strong> WebRTC mandates DTLS encryption — the same technology that secures HTTPS traffic. Data is encrypted before it leaves the sender's browser and decrypted only by the receiver's browser.</li>
+        <li><strong>Zero server storage.</strong> The signaling server only helps peers find each other. It never sees, stores, or processes file data, file names, or file sizes.</li>
+        <li><strong>No accounts.</strong> No registration, no email, no passwords. Your session is identified by a random code that your browser generates.</li>
+        <li><strong>Session codes are random.</strong> Generated using <code>crypto.getRandomValues</code> — cryptographically secure, not guessable.</li>
+        <li><strong>No logs.</strong> The signaling server is configured to retain no logs. Once the connection ends, the session data is gone.</li>
+      </ul>
+
+      <div class="feature-grid">
+        <div class="feature-item">
+          <div class="icon">🔒</div>
+          <div class="label">DTLS Encrypted</div>
+          <div class="desc">Bank-grade encryption for every byte</div>
+        </div>
+        <div class="feature-item">
+          <div class="icon">🗑️</div>
+          <div class="label">Zero Storage</div>
+          <div class="desc">No server ever stores your files</div>
+        </div>
+        <div class="feature-item">
+          <div class="icon">📏</div>
+          <div class="label">No Limits</div>
+          <div class="desc">Any size, any type, any number of files</div>
+        </div>
+        <div class="feature-item">
+          <div class="icon">🌍</div>
+          <div class="label">Works Anywhere</div>
+          <div class="desc">Across NATs, firewalls, and countries</div>
+        </div>
+      </div>
+
+      <h2>❓ Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <h3>Is there a file size limit?</h3>
+        <p>No. The code has no limit. For files over 20 GB, we recommend the recipient use desktop Chrome, Edge, or Opera — these browsers can stream directly to disk, avoiding RAM crashes.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I send multiple files?</h3>
+        <p>Yes. Select multiple files when browsing, or drag them all into the drop zone. They'll be sent one after another — the receiver accepts each one.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How fast is the transfer?</h3>
+        <p>As fast as both internet connections allow. Speed is limited by the slower of the sender's upload and the receiver's download. Check your speed at speedtest.net.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What happens if the connection drops?</h3>
+        <p>The receiver can click "Reconnect & Resume" to rejoin the session. The transfer picks up from where it stopped (the sender doesn't re-send already-delivered chunks).</p>
+      </div>
+      <div class="faq-item">
+        <h3>Is my data private?</h3>
+        <p>Yes. Files are encrypted end-to-end using DTLS and never touch any server. The signaling server only handles the initial handshake. See the <a href="/privacy" style="color:var(--neon-cyan);">Privacy Policy</a> for details.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Does it work on mobile?</h3>
+        <p>Yes — but files over 150 MB may crash mobile browsers due to RAM limits. For large files, use desktop Chrome, Edge, or Opera with disk streaming support.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Do I need to install anything?</h3>
+        <p>No. Everything runs in the browser. You can also install me2u as a PWA (Progressive Web App) for an app-like experience.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I use it behind a firewall or VPN?</h3>
+        <p>Usually yes. WebRTC uses multiple techniques (STUN, TURN) to work around NATs and firewalls. If a direct connection fails, it falls back to a relay server — slower but works everywhere.</p>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span>© 2026 me2u · Made with ❤️ &amp; WebRTC</span>
+      <div class="footer-links">
+        <a href="/privacy">Privacy</a>
+        <a href="/how-it-works">How it works</a>
+        <a href="https://github.com/me2u-official/me2u" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
