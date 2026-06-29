@@ -745,11 +745,14 @@ function setupReceiverConnection(conn) {
                 const handle = await window.showSaveFilePicker({ suggestedName: safeName });
                 state.writableStream = await handle.createWritable();
               } catch (err) {
-                showStatus('receiveStatus', '❌ Download cancelled or failed to open file picker.', 'error');
-                return;
+                // showSaveFilePicker exists but dialog was cancelled or unavailable
+                // (e.g. automation, sandboxed iframe) — fall back to in-memory Blob
+                console.warn('showSaveFilePicker failed, falling back to Blob download:', err);
+                state.writableStream = null;
               }
-            } else {
-              // Show foreground warning for mobile/Safari
+            }
+            if (!state.writableStream) {
+              // Show foreground warning for mobile/Safari (no disk streaming)
               showStatus('receiveStatus', '⚠️ Keep this page open in the foreground. Switching apps will interrupt the transfer.', 'warn');
             }
             
