@@ -5,6 +5,10 @@
   "buildCommand": "echo 'Static site - no build required'",
   "outputDirectory": ".",
   "installCommand": "echo 'No dependencies to install'",
+  "rewrites": [
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/how-it-works", "destination": "/how-it-works.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
